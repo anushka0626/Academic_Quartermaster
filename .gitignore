@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+.env
+.flaskenv
+secrets.json
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
