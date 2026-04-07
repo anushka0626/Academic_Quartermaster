@@ -11,18 +11,23 @@ from anyio import BrokenResourceError
 
 load_dotenv()                           
 init_db()
+
+
+raw_token = os.getenv('ZAPIER_MCP_ACCESS_TOKEN', '')
+clean_token = raw_token.strip().replace("\n", "").replace("\r", "")
+
 zapier_tools = McpToolset(
     connection_params=StreamableHTTPConnectionParams(
         url="https://mcp.zapier.com/api/v1/connect",
         headers={
-            "Authorization": f"Bearer {os.getenv('ZAPIER_MCP_ACCESS_TOKEN')}"
+            "Authorization": f"Bearer {clean_token}"
         }
     )
 )
 
 async def get_calendar_events(query: str):
     """Searches the user's Google Calendar for events or meetings."""
-    TOKEN = os.getenv("ZAPIER_MCP_ACCESS_TOKEN")
+    TOKEN = clean_token
     MCP_URL = "https://mcp.zapier.com/api/v1/connect"
     
     try:
@@ -56,7 +61,7 @@ async def search_academic_archives(query: str):
 
 async def create_study_reminder(task_title: str):
     """Creates a new task in Google Tasks to remind the user to study."""
-    TOKEN = os.getenv("ZAPIER_MCP_ACCESS_TOKEN")
+    TOKEN = clean_token
     MCP_URL = "https://mcp.zapier.com/api/v1/connect"
     
     try:
@@ -83,7 +88,7 @@ async def create_lecture_notes_page(subject: str):
     if context:
         summary = f"Related Research: {context[0][1]}" 
 
-    TOKEN = os.getenv("ZAPIER_MCP_ACCESS_TOKEN")
+    TOKEN = clean_token
     PARENT_ID = os.getenv("NOTION_PAGE_ID")
     
     try:
@@ -103,10 +108,8 @@ async def create_lecture_notes_page(subject: str):
     except Exception as c:
         return f"notion page create failed:{str(c)}"
 
-
 async def check_schedule_and_remind(task_title: str, preferred_time: str):
-    """Checks for calendar conflicts before setting a study task."""
-    TOKEN = os.getenv("ZAPIER_MCP_ACCESS_TOKEN")
+    TOKEN = clean_token
     
     try:
         async with Client(StreamableHttpTransport(url="https://mcp.zapier.com/api/v1/connect", 
@@ -114,24 +117,43 @@ async def check_schedule_and_remind(task_title: str, preferred_time: str):
             
             busy_check = await client.call_tool(
                 "google_calendar_find_busy_periods_in_calendar",
-                arguments={"instructions": f"Am I busy around {preferred_time}?"}
+                arguments={"instructions": f"Check my schedule for {preferred_time}. Am I busy?"}
             )
             
-            if "busy" in str(busy_check).lower():
-                return f"⚠️ Conflict detected: You have an event during {preferred_time}. Suggesting a different time."
+            # IMPROVED CHECK:
+            # Most MCP tools return an empty list or a specific "no conflict" string.
+            # Instead of checking for the word 'busy', check if the result contains actual event details.
+            response_text = str(busy_check).lower()
             
-            await client.call_tool("google_tasks_create_task", arguments={"instructions": task_title, "title": task_title})
+            # If the response explicitly mentions a specific event or a non-empty list
+            if "busy" in response_text and "no busy" not in response_text and "free" not in response_text:
+                return f"⚠️ Conflict detected: {busy_check}. Suggesting a different time."
+            
+            # If it's free, proceed to create the task
+            await client.call_tool("google_tasks_create_task", 
+                                   arguments={"instructions": task_title, "title": task_title})
             return f"Slot is free! Task '{task_title}' created for {preferred_time}."
+        
     except Exception as s:
         return f"schedule check faile:{str(s)}"
     
 async def draft_professional_email(recipient: str, subject: str, context: str):
-    """Drafts an email based on project data but DOES NOT send without approval."""
+    TOKEN = clean_token
+    
     try:
-        draft = f"To: {recipient}\nSubject: {subject}\n\nDear Reviewer,\n\nRegarding {context}..."
-        return f"DRAFT CREATED (Review before sending):\n\n{draft}"
+        async with Client(StreamableHttpTransport(url="https://mcp.zapier.com/api/v1/connect", 
+                        headers={"Authorization": f"Bearer {TOKEN}"})) as client:
+            
+            # Simplified arguments to avoid 'invalid_type' errors
+            result = await client.call_tool(
+                "gmail_create_draft", 
+                arguments={
+                    "instructions": f"Create a draft to {recipient} with subject '{subject}'. Body: {context}"
+                }
+            )
+            return f"✅ Draft created in your Gmail for {recipient}!"
     except Exception as e:
-        return f"email drafting failed: {str(e)}"
+        return f"❌ Email drafting failed: {str(e)}"
 
 async def save_academic_note(category: str, content: str):
     #from .database import save_snippet
@@ -150,7 +172,8 @@ root_agent = Agent(
     instruction="""You are the Academic Quartermaster, a decisive multi-agent coordinator for a CS student managing two projects: 'Veritas Ledger' (Blockchain/NLP research paper) and 'AccessLogix' (Arduino/RFID lab system).
 
     CORE RULES - FOLLOW STRICTLY:
-    1. NEVER ask for confirmation before taking action. If the user says "yes", "okay", "sure" — just DO IT immediately using the right tool.
+    1. NEVER ask for confirmation before taking action. If the user says "yes", "okay", "sure" — just DO IT immediately 
+    using the right tool.
     2. NEVER say "Would you like me to...?" — just do it and report back.
     3. If a tool fails, say so briefly and offer ONE alternative. Don't explain the technical error.
     4. Always search archives FIRST before saying notes don't exist.
@@ -168,6 +191,7 @@ root_agent = Agent(
     RESPONSE STYLE:
     - Be concise. Max 3 sentences unless listing results.
     - Use bullet points for multiple results.
-    - Always confirm what action you took, not what you plan to do.""",
-    tools=[get_calendar_events,search_academic_archives, create_study_reminder,create_lecture_notes_page,check_schedule_and_remind,draft_professional_email,save_academic_note]
+    - Always confirm what action you took, not what you plan to do.
+    CRITICAL: You must EXECUTELY call the tool. Do not just describe what you will do""",
+    tools=[zapier_tools, get_calendar_events,search_academic_archives, create_study_reminder,create_lecture_notes_page,check_schedule_and_remind,draft_professional_email,save_academic_note]
 )

@@ -161,7 +161,7 @@ function addMessage(text, role, tools) {
   div.appendChild(av);
   div.appendChild(bubble);
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight; // AUTOSCROLL
+  messagesEl.scrollTop = messagesEl.scrollHeight; 
 }
 
 function showTyping() {
@@ -181,30 +181,47 @@ function removeTyping() {
 async function sendMessage() {
   const text = inputEl.value.trim();
   if (!text) return;
+  
   inputEl.value = "";
   inputEl.style.height = "auto";
   sendBtn.disabled = true;
+  
   addMessage(text, "user");
   showTyping();
+
   try {
     const res = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: JSON.stringify({ prompt: text })
     });
+
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+
     const data = await res.json();
     removeTyping();
-    if (data.status === "success") {
-      addMessage(data.agent_response || "Done!", "bot", data.tools_used);
+
+    // Check if data exists and has a success status
+    if (data && data.status === "success") {
+      addMessage(data.agent_response || "Action completed.", "bot", data.tools_used);
     } else {
-      addMessage("Something went wrong. Please try again.", "bot");
+      // If the backend returned an error status, show the agent's error message if available
+      const errMsg = data.agent_response || "Something went wrong. Please try again.";
+      addMessage(errMsg, "bot");
     }
   } catch(e) {
+    console.error("Fetch Error:", e);
     removeTyping();
-    addMessage("CORS Connection Error. Ensure FastAPI has CORSMiddleware enabled.", "bot");
+    addMessage("Connection Error. Check your internet or Cloud Run logs.", "bot");
+  } finally {
+    sendBtn.disabled = false;
+    inputEl.focus();
   }
-  sendBtn.disabled = false;
-  inputEl.focus();
 }
 </script>
 </body>

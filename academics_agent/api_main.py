@@ -1,6 +1,7 @@
 import asyncio
 import uvicorn
 import sys
+import traceback
 from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -59,34 +60,43 @@ async def ask_quartermaster(item: UserPrompt):
         full_response = ""
         tool_calls_log = []
 
+        # Replace your current event loop with this:
         async for event in runner.run_async(
             user_id="jury_member", 
             session_id=session_id, 
             new_message=message
         ):
-            if hasattr(event, 'content') and event.content and event.content.parts:
-                for part in event.content.parts:
+            # Safe check: Only try to read text if the event has content and parts
+            if event.is_final_response():
+                if event.content and event.content.parts and len(event.content.parts) > 0:
+                    part = event.content.parts[0]
+                    # Only assign if the part actually contains text
                     if hasattr(part, 'text') and part.text:
-                        full_response += part.text
-                    elif hasattr(part, 'function_call') and part.function_call:
-                        tool_calls_log.append(f"[Tool called: {part.function_call.name}]")
-        
-        if not full_response:
-            full_response = "Agent completed tasks. " + " ".join(tool_calls_log)
-
+                        full_response = part.text
+            
+            # 2. Log tool calls for debugging
+            if hasattr(event, 'tool_call') and event.tool_call:
+                tool_calls_log.append(f"Calling: {event.tool_call.function_name}")
+                
+            # 3. Log tool results (this confirms the tool actually finished)
+            if hasattr(event, 'tool_result') and event.tool_result:
+                tool_calls_log.append(f"Result received from: {event.tool_result.function_name}")
         return {
             "status": "success", 
-            "agent_response": full_response,
+            "agent_response": full_response if full_response else "No verbal response, but tools may have run.",
             "tools_used": tool_calls_log
         }
-
     except Exception as e:
-        import traceback
+        error_str = str(e)
+        if "503" in error_str or "UNAVAILABLE" in error_str:
+            user_message = "Gemini is under high demand right now. Please retry in 30 seconds."
+        else:
+            user_message = error_str
         return {
             "status": "error",
-            "agent_response": str(e),
+            "agent_response": user_message,
             "traceback": traceback.format_exc()
-        }
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

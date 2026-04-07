@@ -1,33 +1,50 @@
 # 🛡️ Academic Quartermaster: Multi-Agent CS Assistant
 **APAC GenAI Academy Edition - Cohort 1**
 
-The Academic Quartermaster is a sophisticated **Multi-Agent Cognitive Architecture** designed to solve "Academic Fragmentation." As a CS student, research notes, deadlines, and project tasks are often scattered. This system unifies them using specialized sub-agents.
+Academic Quartermaster is a sophisticated **Multi-Agent Cognitive Architecture** built with the **Google Agent Development Kit (ADK)**. It solves "Academic Fragmentation" by unifying scattered research notes, deadlines, and project tasks into a single, proactive intelligence.
 
 ## 🚀 Live Links
-* **Interactive UI:** [Insert Your GitHub Pages Link Here]
-* **Agent API (Swagger):** https://academics-quartermaster-552903401245.asia-south1.run.app/docs
+* **Interactive Web UI:** [Live on GitHub Pages](https://anushka0626.github.io/Academic_Quartermaster/)
+* **Agent API (Swagger):** [Cloud Run Endpoint](https://academics-quartermaster-552903401245.asia-south1.run.app/docs)
 
-## 🧠 The Architecture
-The system utilizes a **Coordinator-Specialist** pattern:
-1. **The Registrar (Registrar Agent):** Manages time-sensitive data via Google Calendar and Classroom (Zapier MCP).
-2. **The Librarian (Librarian Agent):** Manages a persistent SQLite knowledge base for project research like *Veritas Ledger* and *AccessLogix*.
-3. **The Secretary (Secretary Agent):** Executes workflow tasks, including creating Notion workspace pages and Google Tasks.
+---
+
+## 🧠 Core Agent Features
+
+### 📚 The Librarian (Memory & Research)
+* **Persistent Knowledge Base:** Uses an optimized SQLite3 backend to archive project-specific research.
+* **Contextual Retrieval:** Search through archives for specific project details (e.g., *Veritas Ledger* or *AccessLogix*) using natural language.
+
+### 📅 The Registrar (Schedule & Tasks)
+* **Smart Conflict Detection:** Checks Google Calendar for "busy" periods before allowing a task to be scheduled.
+* **Task Automation:** Automatically creates action items in Google Tasks once a free slot is confirmed.
+
+### 📝 The Secretary (Workspace Management)
+* **Notion Integration:** Generates titled lecture note pages in specified Notion workspaces with one command.
+* **Gmail Professional Drafting:** Synthesizes research from your archives into professional email drafts sitting ready in your Gmail "Drafts" folder.
+
+---
 
 ## 🛠️ Tech Stack
-* **LLM:** Gemini 3 Flash
+* **LLM:** Gemini 3 Flash (via Google GenAI SDK)
 * **Framework:** Google Agent Development Kit (ADK)
-* **API:** FastAPI & Uvicorn
-* **Deployment:** Google Cloud Run (Containerized via Docker)
 * **Orchestration:** Model Context Protocol (MCP) via Zapier
-* **Database:** SQLite3
+* **Backend:** FastAPI & Uvicorn (Containerized via Docker)
+* **Infrastructure:** Google Cloud Run (Region: `asia-south1`)
 
-## 📦 Project Structure
-```text
-├── academics_agent/
-│   ├── core_agent.py   # Root Agent Logic & Tool definitions
-│   ├── database.py     # SQLite Librarian logic
-│   └── quartermaster.db
-├── main.py             # FastAPI Entry point
-├── index.html          # Custom Web UI (GitHub Pages)
-├── Procfile            # Cloud Run Deployment instructions
-└── requirements.txt    # Dependency Manifest
+---
+
+## ⚙️ Installation & Local Setup
+
+If you wish to run the Academic Quartermaster locally, follow these steps:
+
+### 1. Prerequisites
+* Python 3.11+
+* A Google Cloud Project with **Vertex AI API** enabled.
+* A Zapier account with **MCP** enabled.
+
+### 2. Clone and Install
+```bash
+git clone [https://github.com/anushka0626/Academic_Quartermaster.git](https://github.com/anushka0626/Academic_Quartermaster.git)
+cd Academic_Quartermaster
+pip install -r requirements.txt
