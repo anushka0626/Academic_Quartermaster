@@ -1,4 +1,5 @@
 import os
+import google.generativeai as genai
 from dotenv import load_dotenv          
 from google.adk.agents.llm_agent import Agent
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
@@ -166,7 +167,7 @@ async def save_academic_note(category: str, content: str):
 
 #ROOT AGENT heree
 root_agent = Agent(
-    model='gemini-1.5-flash', 
+    model='gemini-2.5-flash',
     name='academics_agent',
     description='Multi-agent system for academics managing',
     instruction="""You are the Academic Quartermaster, a decisive multi-agent coordinator for a CS student managing two projects: 'Veritas Ledger' (Blockchain/NLP research paper) and 'AccessLogix' (Arduino/RFID lab system).

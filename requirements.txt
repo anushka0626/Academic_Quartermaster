@@ -4,3 +4,5 @@ google-genai
 google-adk
 fastmcp
 python-dotenv
+google-generativeai
+google-genai
